@@ -1,5 +1,17 @@
 import UIKit
 
+public class DeallocationChecker {
+    public enum Handler {
+        case precondition
+    }
+
+    static var handler: Handler?
+
+    public static func setup(with handler: Handler) {
+        self.handler = handler
+    }
+}
+
 extension UIViewController {
 
     /// This method asserts whether a view controller gets deallocated after it disappeared
@@ -22,7 +34,13 @@ extension UIViewController {
             let disappearanceSource: String = isMovingFromParentViewController ? "removed from its parent" : "dismissed"
             
             DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: { [weak self] in
-                assert(self == nil, "\(viewControllerType) not deallocated after being \(disappearanceSource)")
+                guard self == nil else { return }
+                guard let handler = DeallocationChecker.handler else { return }
+
+                switch handler {
+                case .precondition:
+                    preconditionFailure("\(viewControllerType) not deallocated after being \(disappearanceSource)")
+                }
             })
         }
     }
